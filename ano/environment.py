@@ -65,7 +65,7 @@ class Version(namedtuple('Version', 'major minor build')):
 
 class Environment(dict):
 
-    templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
+    templates_path = [ os.path.join(os.path.expanduser(parent), 'templates') for parent in ['~/.ano/', os.path.dirname(__file__)] ]
     output_dir = '.build_ano'
     lib_dir = 'lib'
     hex_filename = 'firmware.hex'

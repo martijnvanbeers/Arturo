@@ -4,6 +4,7 @@ import os.path
 import shutil
 
 from configobj import ConfigObj
+from itertools import chain
 
 from ano.commands.base import Command
 from ano.exc import Abort
@@ -24,28 +25,31 @@ class Init(Command):
 
     def setup_arg_parser(self, parser):
         super(Init, self).setup_arg_parser(parser)
-        parser.add_argument('-t', '--template', default=self.default_template, 
+        parser.add_argument('-t', '--template', default=self.default_template,
                             help='Project template to use')
 
         parser.epilog = "Available project templates:\n\n"
 
         template_items = []
-        for tdir in list_subdirs(self.e.templates_dir):
+        for tdir in list(chain.from_iterable([list_subdirs(d) for d in self.e.templates_path])):
             try:
                 description = ConfigObj(os.path.join(tdir, 'manifest.ini'))['description']
             except KeyError:
                 description = ''
             template_items.append((os.path.basename(tdir), description))
 
-        parser.epilog += format_available_options(template_items, head_width=12, 
+        parser.epilog += format_available_options(template_items, head_width=12,
                                                   default=self.default_template)
 
     def run(self, args):
-        try:
-            copytree(os.path.join(self.e['templates_dir'], args.template),
-                     '.', ignore=lambda *args: ['manifest.ini'])
-        except shutil.Error as e:
-            raise Abort(str(e))
+        for parent in self.e.templates_path:
+            tdir = os.path.join(parent, args.template)
+            if os.path.isdir(tdir):
+                try:
+                    copytree(tdir, '.', ignore=lambda *args: ['manifest.ini'])
+                except shutil.Error as e:
+                    raise Abort(str(e))
+                break
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
